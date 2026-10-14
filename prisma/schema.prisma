@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Kullanıcılar (Müşteri ve Sistem Yöneticisi)
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("USER") // "USER" veya "ADMIN"
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Avizeler (Ana Ürün Bilgileri)
+model Product {
+  id          String             @id @default(uuid())
+  title       String
+  description String?
+  category    String             // Örn: "Klasik", "Modern", "Kristal"
+  basePrice   Float
+  imageUrl    String?            // Yeni eklenen avize görseli alanı
+  variations  ProductVariation[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+// Avize Varyasyonları (Örn: Duy Sayısı, Renk/Kaplama)
+model ProductVariation {
+  id             String      @id @default(uuid())
+  productId      String
+  product        Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variationType  String      // Örn: "Gövde Rengi", "Duy Sayısı"
+  variationValue String      // Örn: "Gold", "5'li"
+  extraPrice     Float       @default(0) // Taban fiyata eklenecek fark
+  stock          Int         @default(0)
+  orderItems     OrderItem[]
+}
+
+// Müşteri Siparişleri
+model Order {
+  id           String      @id @default(uuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  totalAmount  Float
+  shippingType String      // Örn: "BEYOGLU_MAGAZA_TESLIM" veya "STANDART_KARGO"
+  status       String      @default("PENDING") // PENDING, PREPARING, SHIPPED, DELIVERED
+  items        OrderItem[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+// Sipariş Kalemleri
+model OrderItem {
+  id          String           @id @default(uuid())
+  orderId     String
+  order       Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variationId String
+  variation   ProductVariation @relation(fields: [variationId], references: [id])
+  quantity    Int
+  unitPrice   Float            // Sipariş anındaki birim fiyat
+}
